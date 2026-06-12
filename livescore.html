@@ -396,7 +396,7 @@ function showView(name){
   document.querySelectorAll("[data-view]").forEach(v=>v.classList.toggle("hidden",v.dataset.view!==name));
   window.scrollTo(0,0);
 }
-const loaded={};
+let loaded={};
 function openTab(name){
   showView(name);
   document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.tab===name));
