@@ -226,7 +226,7 @@ function renderPills(id){
 }
 function renderDays(){
   const d=$("#days"); const wk=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]; let h="";
-  for(let i=-3;i<=3;i++){const dt=new Date();dt.setDate(dt.getDate()+i);const on=ymd(dt)===ymd(STATE.date);
+  for(let i=-3;i<=3;i++){const dt=new Date();dt.setDate(dt.getDate()+i);const on=STATE.picked&&ymd(dt)===ymd(STATE.date);
     h+=`<button class="day ${on?'on':''}" data-d="${ymd(dt)}"><div class="wd">${wk[dt.getDay()]}</div><div class="dn">${dt.getDate()}</div></button>`;}
   d.innerHTML=h;
 }
@@ -234,8 +234,17 @@ function renderDays(){
 /* ── HOME games ── */
 async function loadGames(){
   $("#games").innerHTML=`<div class="spin">Loading…</div>`;
-  let d; try{ d=await espn("/scoreboard"+(STATE.picked?"?dates="+ymd(STATE.date):"")); }catch(e){ $("#games").innerHTML=`<div class="empty">Couldn't load matches.</div>`; return; }
-  STATE.events=d.events||[];
+  try{
+    if(STATE.picked){
+      const ds=[-1,0,1].map(o=>{const dt=new Date(STATE.date);dt.setDate(dt.getDate()+o);return ymd(dt);});
+      const res=await Promise.all(ds.map(s=>espn("/scoreboard?dates="+s).then(r=>r.events||[]).catch(()=>[])));
+      const seen={},all=[];res.flat().forEach(e=>{if(!seen[e.id]){seen[e.id]=1;all.push(e);}});
+      const t=ymd(STATE.date);
+      STATE.events=all.filter(e=>ymd(new Date(e.date))===t).sort((a,b)=>new Date(a.date)-new Date(b.date));
+    } else {
+      const d=await espn("/scoreboard"); STATE.events=d.events||[];
+    }
+  }catch(e){ $("#games").innerHTML=`<div class="empty">Couldn't load matches.</div>`; return; }
   const anyLive=STATE.events.some(e=>compt(e).status.type.state==="in");
   $("#games-title").textContent=anyLive?"Live games":(STATE.picked?"Matches":"Latest games");
   if(!STATE.events.length){ $("#games").innerHTML=`<div class="empty">No matches on this day.</div>`; return; }
